@@ -1,0 +1,1 @@
+ parallel -j 10 "wget https://www.ebi.ac.uk/ena/data/view/{}\&display\=fasta -O {}.fa" ::: `cat ../id_list.txt`
