@@ -31,31 +31,31 @@ def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, 
     mmCount = round(totCount - singCount)
     unmapCount = totReads - totCount
     FN = totReads - TP - FP - TN - roseCount - euCount
-    stText = "\n" + \
-    "====================================================================================" + \
-    "Total Number of reads: {0} ({1:.2f}M)".format(totReads, totReads/mil)+ \
-    "Number of Unmapped reads: {0} ({1:.2f}M, {2:.2f}%)".format(unmapCount, unmapCount/mil, unmapCount*hund/totReads)+ \
-    "Number of Mapped reads {0}({1:.2f}M, {2:.2f}%)".format(totCount, totCount/mil, totCount*hund/totReads)+ \
-    "\n"+ \
-    "============================ OUT OF MAPPED READS ==================================="+ \
-    "Number of Singly Mapped reads: {0} ({1:.2f}M, {2:.2f}%)".format(singCount, singCount/mil, singCount*hund/totReads)+ \
-    "Number of Multimapped reads: {0} ({1:.2f}M, {2:.2f}%)".format(mmCount, mmCount/mil, mmCount*hund/totReads)+ \
-    "Number of Mapped but Skipped reads: {0} ({1:.2f}M, {2:.2f}%)".format(skipCount, skipCount/mil, skipCount*hund/totReads)+ \
-    "Number of Orphaned (Ignored)ALIGNMENTS (Should be significantly low): {}".format(orphanCount)+ \
-    "===================================================================================="+ \
-    "\n ===================== \n ASSUMPTIONS \n ====================="+ \
-    "1: Any Multi-mapped read has the Original Phyla in ATLEAST 1 alignment"+ \
-    "2: Don't know what to do with Rose Sequence Ignoring for now"+ \
-    "3: No reference of Eukaryotes added"+ \
-    "OVERALL: Atmost 10% Reads could have been mapped more."+ \
-    "Eukaryotes Counts: {0}({1:.2f}%)".format(euCount, euCount*hund/totReads)+ \
-    "Rose Counts: {0}({1:.2f}%)".format(roseCount, roseCount*hund/totReads)+ \
-    "===================================================================================="+ \
-    "\n ===================== \n ACCURACY METRIC \n ====================="+ \
-    "Number of True positives(TP) reads: {0} ({1:.2f}M, {2:.2f}%)".format(TP, TP/mil, TP*hund/totReads)+ \
-    "Number of False Negatives(FN) reads: {0} ({1:.2f}M, {2:.2f}%)".format(FN, FN/mil, FN*hund/totReads)+ \
-    "Number of False positives(FP) reads: {0} ({1:.2f}M, {2:.2f}%)".format(FP, FP/mil, FP*hund/totReads)+ \
-    "Number of True Negatives(TN) reads: {0} ({1:.2f}M, {2:.2f}%)".format(TN, TN/mil, TN*hund/totReads)+ \
+    stText = "\n\n" + \
+    "====================================================================================\n" + \
+    "Total Number of reads: {0} ({1:.2f}M)\n".format(totReads, totReads/mil)+ \
+    "Number of Unmapped reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(unmapCount, unmapCount/mil, unmapCount*hund/totReads)+ \
+    "Number of Mapped reads {0}({1:.2f}M, {2:.2f}%)\n".format(totCount, totCount/mil, totCount*hund/totReads)+ \
+    "\n\n"+ \
+    "============================ OUT OF MAPPED READS ===================================\n"+ \
+    "Number of Singly Mapped reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(singCount, singCount/mil, singCount*hund/totReads)+ \
+    "Number of Multimapped reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(mmCount, mmCount/mil, mmCount*hund/totReads)+ \
+    "Number of Mapped but Skipped reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(skipCount, skipCount/mil, skipCount*hund/totReads)+ \
+    "Number of Orphaned (Ignored)ALIGNMENTS (Should be significantly low): {}\n".format(orphanCount)+ \
+    "====================================================================================\n"+ \
+    "\n ===================== \n ASSUMPTIONS \n =====================\n"+ \
+    "1: Any Multi-mapped read has the Original Phyla in ATLEAST 1 alignment\n"+ \
+    "2: Don't know what to do with Rose Sequence Ignoring for now\n"+ \
+    "3: No reference of Eukaryotes added\n"+ \
+    "OVERALL: Atmost 10% Reads could have been mapped more.\n"+ \
+    "Eukaryotes Counts: {0}({1:.2f}%)\n".format(euCount, euCount*hund/totReads)+ \
+    "Rose Counts: {0}({1:.2f}%)\n".format(roseCount, roseCount*hund/totReads)+ \
+    "====================================================================================\n"+ \
+    "\n ===================== \n ACCURACY METRIC \n =====================\n"+ \
+    "Number of True positives(TP) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(TP, TP/mil, TP*hund/totReads)+ \
+    "Number of False Negatives(FN) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(FN, FN/mil, FN*hund/totReads)+ \
+    "Number of False positives(FP) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(FP, FP/mil, FP*hund/totReads)+ \
+    "Number of True Negatives(TN) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(TN, TN/mil, TN*hund/totReads)+ \
     "====================================================================================\n\n\n\n"
 
     filename = cwd + "/report.txt"
@@ -148,7 +148,7 @@ def get_stats(sam, fq, level):
 
             # Progress Monitoring
             if(round(totCount) % mil == 0):
-                print ("\r Done reading {} Million reads from BAM.".format(int(round(totCount)/1000000)), end="")
+                print ("\r Done reading {} Million reads from SAM.".format(int(round(totCount)/1000000)), end="")
                 sys.stdout.flush()
 
             # get ground truth id
@@ -234,7 +234,7 @@ def get_stats(sam, fq, level):
                     FP += 1
 
     write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, skipCount, TP, FP, FN, TN, cwd)
-    print ("output written to {}".format(os.getcwd()+"/reports.txt"))
+    print ("\noutput written to {}".format(os.getcwd()+"/reports.txt"))
 
 if __name__=="__main__":
     get_stats()
