@@ -59,10 +59,8 @@ def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, 
     "====================================================================================\n\n\n\n"
 
     filename = cwd + "/report.txt"
-    with open(filename, 'a') as f:
-        content = f.read()
-        f.seek(0, 0)
-        f.write(stText + content)
+    with open(filename, 'w') as f:
+        f.write(stText)
 
 
 @click.command()
