@@ -17,14 +17,22 @@ def get_ref_id(aln):
     except:
         return aln.reference_name.split(".")[0]
 
-def print_details(qId, rId, aln, id2phlm):
-    print ("ERROR", file=sys.stderr)
-    print("SAM Algns", file=sys.stderr)
-    print (aln.query_name, aln.reference_name, file=sys.stderr)
-    print("SUBSETTING", file=sys.stderr)
-    print (qId, rId, file=sys.stderr)
-    print ("PHYLA", file=sys.stderr)
-    print (id2phlm[qId], id2phlm[rId], file=sys.stderr)
+def print_details(qId, rId, aln, id2phlm, lvl="sing"):
+    if lvl == "sing":
+        print ("ERROR", file=sys.stderr)
+        print("SAM Algns", file=sys.stderr)
+        print (aln.query_name, aln.reference_name, file=sys.stderr)
+        print("SUBSETTING", file=sys.stderr)
+        print (qId, rId, file=sys.stderr)
+        print ("PHYLA", file=sys.stderr)
+        print (id2phlm[qId], id2phlm[rId], file=sys.stderr, end="\n")
+    else:
+        print ("ERROR", file=sys.stderr)
+        print ("PHYLA", file=sys.stderr)
+        print (qId, file=sys.stderr, end="\t")
+        for an in aln:
+            print (an, file=sys.stderr, end="\t")
+        print("\n", file=sys.stderr)
 
 
 def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, skipCount, TP, FP, FN, TN, cwd):
@@ -219,7 +227,7 @@ def get_stats(sam, fq, level):
                 elif level == "all":
                     plist = set([])
                     try:
-                        qid = id2phlm[qId]
+                        qId = id2phlm[qId]
                         for rId in algns:
                             plist.add( id2phlm[rId] )
                             if len(plist) > 1:
@@ -234,7 +242,7 @@ def get_stats(sam, fq, level):
                 if flag:
                     TP += 1
                 else:
-#                     print_details(qId, rId, aln, id2phlm)
+                    print_details(qId, rId, plist, id2phlm, "multi")
                     FP += 1
 
     write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, skipCount, TP, FP, FN, TN, cwd)
