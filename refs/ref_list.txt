@@ -930,3 +930,13 @@ CP000975.1
 CP001032.1
 CP001071.1
 CP001998.1
+AE016823
+ftp://ftp.ensemblgenomes.org/pub/plants/release-37/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.chromosome.4.fa.gz
+ftp://ftp.ensembl.org/pub/release-91/fasta/gallus_gallus/dna/Gallus_gallus.Gallus_gallus-5.0.dna.chromosome.28.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-91/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-91/fasta/anolis_carolinensis/dna/Anolis_carolinensis.AnoCar2.0.dna.chromosome.2.fa.gz
+https://downloads.yeastgenome.org/sequence/S288C_reference/chromosomes/fasta/chr04.fsa
+https://downloads.yeastgenome.org/sequence/S288C_reference/chromosomes/fasta/chr15.fsa
+https://www.ncbi.nlm.nih.gov/nuccore/JH584390.1?report=genbank
+https://www.ncbi.nlm.nih.gov/nuccore/JH584391.1?report=genbank
+https://www.ncbi.nlm.nih.gov/nuccore/728894555?report=fasta

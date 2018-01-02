@@ -39,6 +39,13 @@ def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, 
     mmCount = round(totCount - singCount)
     unmapCount = totReads - totCount
     FN = totReads - TP - FP - TN - roseCount - euCount
+
+
+    sen = TP/float(TP+FN)
+    spec = TN/float(TN+FP)
+    ppv = TP/float(TP+FP)
+    npv = TN/float(TN+FN)
+    mcc = ((TP*TN)-(FP*FN)) / math.sqrt( (TP+FP)*(TP+FN)*(TN+FP)*(TN+FN)  )
     stText = "\n\n" + \
     "====================================================================================\n" + \
     "Total Number of reads: {0} ({1:.2f}M)\n".format(totReads, totReads/mil)+ \
@@ -64,6 +71,7 @@ def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, 
     "Number of False Negatives(FN) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(FN, FN/mil, FN*hund/totReads)+ \
     "Number of False positives(FP) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(FP, FP/mil, FP*hund/totReads)+ \
     "Number of True Negatives(TN) reads: {0} ({1:.2f}M, {2:.2f}%)\n".format(TN, TN/mil, TN*hund/totReads)+ \
+    "sens:{0:.2f} spec:{1:.2f} prec:{2:.2f} mcc:{3:.2f}\n".format(sen, spec, ppv, mcc)+ \
     "====================================================================================\n\n\n\n"
 
     filename = cwd + "/report.txt"
@@ -242,7 +250,7 @@ def get_stats(sam, fq, level):
                 if flag:
                     TP += 1
                 else:
-                    print_details(qId, rId, plist, id2phlm, "multi")
+                    #print_details(qId, rId, plist, id2phlm, "multi")
                     FP += 1
 
     write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, skipCount, TP, FP, FN, TN, cwd)
