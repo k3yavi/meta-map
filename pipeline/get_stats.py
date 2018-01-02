@@ -85,6 +85,8 @@ def get_stats(sam, fq, level):
         # one of the entry got two identifiers
         if (nk == "CM000636"):
             id2phlm["CP006835"] = v
+        elif v == "Rhizobium_Bradyrhizobium":
+            id2phlm[nk] = "Proteobacteria"
     del data
 
     with open(fq) as f:
@@ -172,7 +174,7 @@ def get_stats(sam, fq, level):
                         # get TP count
                         TP += 1
                     else:
-#                         print_details(qId, rId, aln)
+                        print_details(qId, rId, aln, id2phlm)
                         # get FP count
                         FP += 1
                 except:
