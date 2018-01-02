@@ -18,13 +18,13 @@ def get_ref_id(aln):
         return aln.reference_name.split(".")[0]
 
 def print_details(qId, rId, aln, id2phlm):
-    print ("ERROR")
-    print("SAM Algns")
-    print (aln.query_name, aln.reference_name)
-    print("SUBSETTING")
-    print (qId, rId)
-    print ("PHYLA")
-    print (id2phlm[qId], id2phlm[rId])
+    print ("ERROR", file=sys.stderr)
+    print("SAM Algns", file=sys.stderr)
+    print (aln.query_name, aln.reference_name, file=sys.stderr)
+    print("SUBSETTING", file=sys.stderr)
+    print (qId, rId, file=sys.stderr)
+    print ("PHYLA", file=sys.stderr)
+    print (id2phlm[qId], id2phlm[rId], file=sys.stderr)
 
 
 def write_stats(totCount, singCount, totReads, roseCount, euCount, orphanCount, skipCount, TP, FP, FN, TN, cwd):
@@ -86,6 +86,8 @@ def get_stats(sam, fq, level):
         if (nk == "CM000636"):
             id2phlm["CP006835"] = v
         elif v == "Rhizobium_Bradyrhizobium":
+            id2phlm[nk] = "Proteobacteria"
+        elif v == "Pathogens":
             id2phlm[nk] = "Proteobacteria"
     del data
 
