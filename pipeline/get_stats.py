@@ -234,7 +234,5 @@ def get_stats(fq, sam):
     print_stats(singCount, totCount, totReads, TP, FP, TN, orphanCount)
     print ("\noutput written to {}".format(os.getcwd()+"/reports.txt"))
 
-    return sen, spec, ppv, npv, mcc
-
 if __name__=="__main__":
     get_stats()
