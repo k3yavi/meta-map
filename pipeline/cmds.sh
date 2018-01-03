@@ -1,7 +1,6 @@
 PUFFPATH=$1
 BASEPATH="/mnt/scratch2/avi/meta-map/"
-REF=$BASEPATH"refs/corr.fasta"
-INDEX=$BASEPATH"pufIndex/"
+INDEX=$BASEPATH"pufIndexEuk"
 R1=$BASEPATH"reads/A1_1.fastq"
 R2=$BASEPATH"reads/A1_2.fastq"
 OUT=$PWD/output
