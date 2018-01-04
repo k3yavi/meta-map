@@ -26,25 +26,31 @@ def print_stats(singCount, totCount, orphanCount, phlmDict):
     with open(filename, 'w') as f:
         f.write(stText)
 
-    with open(cwd+"dist.txt", 'w') as f:
-        for k,v in phlmDict.keys():
+    with open(cwd+"/dist.txt", 'w') as f:
+        for k,v in phlmDict.items():
             f.write(k+","+str(v)+"\n")
 
+def get_algn(aln):
+    return aln.split()[2]
+
 def perform_counting(fname, id2phlm):
-    with pysam.AlignmentFile(fname) as f:
+    with open(fname) as f:
         totCount = 0.0
         singCount = 0
         orphanCount = 0
         phlmDict = defaultdict(int)
         for aln in f:
+            aln = aln.strip()
+            if aln[0] == "@":
+                continue
             #get mate of the read
-            mate_aln = f.next()
+            #mate_aln = f.next()
 
             # count total Number of reads
             totCount += 1
 
             # get number of alignments
-            n_alns = aln.get_tag('NH')
+            n_alns = int(aln[-1])
 
             # for singly mapped reads only
             if n_alns == 1:
@@ -52,10 +58,10 @@ def perform_counting(fname, id2phlm):
                 singCount += 1
 
             # Ignoring Orphan alignments for now
-            if(aln.reference_name != mate_aln.reference_name):
-                orphanCount += 1
-                print ("WARNING: ORPHANS Detected statistics Neess to be re-evaluated")
-                continue
+            #if(aln.reference_name != mate_aln.reference_name):
+                #orphanCount += 1
+                #print ("WARNING: ORPHANS Detected statistics Neess to be re-evaluated")
+                #continue
 
             # Progress Monitoring
             if(round(totCount) % mil == 0):
@@ -64,20 +70,24 @@ def perform_counting(fname, id2phlm):
 
             # query doesn't matter since not known
             # qId = aln.query_name
+            rId = get_algn(aln)
 
-            # list of all alignments
-            rIds = set([id2phlm[ aln.reference_name ]])
-
+            if rId != "*":
+                # list of all alignments
+                rIds = set([ id2phlm[ rId  ] ])
+            print (rId)
             # iterate over all alignments
             for _ in range(1, n_alns):
                 aln = f.next()
-                mate_aln = f.next()
+                #mate_aln = f.next()
 
                 # Ignoring Orphan alignments for now
-                if(aln.reference_name != mate_aln.reference_name):
-                    orphanCount += 1
-                else:
-                    rIds.add(id2phlm[ aln.reference_name ])
+                #if(aln.reference_name != mate_aln.reference_name):
+                #    orphanCount += 1
+                #else:
+                rId = get_algn(aln)
+                if rId != "*":
+                    rIds.add(id2phlm[ rId ])
 
             if len(rIds) == 1:
                 phlmDict[list(rIds)[0]] += 1
@@ -91,7 +101,7 @@ def get_phlm_dict():
                 toks = line.strip().split(",")
                 val = toks[0]
                 for i in range(1, len(toks)):
-                    id2phlm[toks[i]] = val
+                    id2phlm[toks[i].strip(">")] = val
     return id2phlm
 
 @click.command()
