@@ -40,54 +40,47 @@ def perform_counting(fname, id2phlm):
         orphanCount = 0
         phlmDict = defaultdict(int)
         for aln in f:
-            aln = aln.strip()
-            if aln[0] == "@":
+            toks = aln.strip().split()
+            if toks[0][0] == "@":
                 continue
             #get mate of the read
             #mate_aln = f.next()
 
-            # count total Number of reads
-            totCount += 1
-
             # get number of alignments
-            n_alns = int(aln[-1])
+            n_alns = int(toks[-1].replace("NH:i:",""))
 
             # for singly mapped reads only
             if n_alns == 1:
                 # Increment the single count
                 singCount += 1
+            elif n_alns == 0:
+                continue
 
-            # Ignoring Orphan alignments for now
-            #if(aln.reference_name != mate_aln.reference_name):
-                #orphanCount += 1
-                #print ("WARNING: ORPHANS Detected statistics Neess to be re-evaluated")
-                #continue
+            # count total Number of reads
+            totCount += 1
+
+            rId = get_algn(aln)
+
+            # list of all alignments
+            rIds = set([ id2phlm[ rId  ] ])
 
             # Progress Monitoring
             if(round(totCount) % mil == 0):
                 print ("\r Done reading {} Million reads from BAM....".format(int(round(totCount)/1000000)), end="")
                 sys.stdout.flush()
 
-            # query doesn't matter since not known
-            # qId = aln.query_name
-            rId = get_algn(aln)
 
-            if rId != "*":
-                # list of all alignments
-                rIds = set([ id2phlm[ rId  ] ])
-            print (rId)
             # iterate over all alignments
             for _ in range(1, n_alns):
                 aln = f.next()
-                #mate_aln = f.next()
 
-                # Ignoring Orphan alignments for now
-                #if(aln.reference_name != mate_aln.reference_name):
-                #    orphanCount += 1
-                #else:
                 rId = get_algn(aln)
-                if rId != "*":
+                try:
                     rIds.add(id2phlm[ rId ])
+                except:
+                    print(aln)
+                    print(n_alns)
+                    exit(1)
 
             if len(rIds) == 1:
                 phlmDict[list(rIds)[0]] += 1
