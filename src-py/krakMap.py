@@ -6,8 +6,10 @@ import math
 import click
 import sys
 from collections import defaultdict
+import random
 
 hund = 100
+hundk = 100000
 
 class Taxa:
     def __init__(self):
@@ -54,20 +56,64 @@ class Taxa:
 
 # class for inverted parent -> child subtree
 class Tree:
-    def __init__(self, paths):
-        self.mappings, self.leaves = self.get_tree(paths)
+    def __init__(self, paths, intvs):
+        self.mappings = defaultdict(set)
+        self.coverage = defaultdict(set)
+        self.leaves = []
         self.root = 1
+        self.populate_tree(paths, intvs)
 
-    def get_tree(paths):
-        mappings = defaultdict(set)
-        leaves = []
-        for path in paths:
-            leaves.append(path[0])
-            for i in range(1, len(path)):
-                from_tid = path[i]
-                to_tid = path[i-1]
-                mappings[from_tid].add(to_tid)
-        return mappings
+    def get_score(self, tid):
+        try:
+            return len(self.coverage[tid])
+        except:
+            print("ERROR: {} not found in subtree".format(tid))
+            exit(1)
+
+    def get_coverage(self, intvs, node="int"):
+        nums = set([])
+        for intv in intvs:
+            if node == "leaf":
+                start = int(intv[0])
+                end = start + int(intv[1])
+                nums |= set(range(start, end))
+            else:
+                nums |= intv
+        return nums
+
+    def populate_tree(self, paths, intvs):
+        nodes = set([])
+        for idx, path in enumerate(paths):
+            leaf = path[0]
+            covg = self.get_coverage(intvs[idx], "leaf")
+
+            # resolving duplicate seq 2 taxid conversion
+            if leaf in self.leaves:
+                if self.get_score(leaf) > len(covg):
+                    continue
+            else:
+                self.leaves.append(leaf)
+                for i in range(1, len(path)):
+                    from_tid = path[i]
+                    to_tid = path[i-1]
+                    nodes.add(from_tid)
+                    self.mappings[from_tid].add(to_tid)
+
+            # update the new coverage
+            self.coverage[leaf] = covg
+
+        while(len(nodes) != 0):
+            node = random.choice(list(nodes))
+            children = self.mappings[node]
+            child_intvs = []
+            for child in children:
+                if child not in self.coverage:
+                    break
+                else:
+                    child_intvs.append(self.coverage[child])
+            if len(child_intvs) == len(children):
+                self.coverage[node] = self.get_coverage(child_intvs)
+                nodes.discard(node)
 
 def read_taxa():
     tf = "/mnt/scratch2/avi/meta-map/kraken/KrakenDB/taxonomy/nodes.dmp"
@@ -91,7 +137,7 @@ def read_map():
     with open(ref) as f:
         return pd.read_table(f, header=None).set_index(0).to_dict()[1]
 
-def get_mapping(taxids, intvs, taxa):
+def get_best_mapping(taxids, intvs, taxa):
     n_maps = len(taxids)
 
     if(n_maps != len(intvs)):
@@ -100,25 +146,17 @@ def get_mapping(taxids, intvs, taxa):
         exit(1)
 
     if n_maps == 1:
-        if taxa.in_leaves(taxids[0]):
-            return taxids[0]
-        else:
-            print("ERROR: taxid not from the leaves\n Exiting")
-            exit(1)
+        return taxids[0]
 
     paths = []
     for taxid in taxids:
-        if taxa.in_leaves(taxid):
-            paths.append( taxa.get_path(taxid) )
-        else:
-            print("ERROR: taxid not from the leaves\n Exiting")
-            exit(1)
+        paths.append( taxa.get_path(taxid) )
 
     # make a small tree with only relevant taxids
-    sub_tree = Tree(paths)
+    sub_tree = Tree(paths, intvs)
     head = sub_tree.root
     while( head not in sub_tree.leaves ):
-        children = sub_tree.mappings[head]
+        children = list(sub_tree.mappings[head])
         # if only one child the just go down the tree
         if len(children) == 1:
             head = children[0]
@@ -131,6 +169,7 @@ def get_mapping(taxids, intvs, taxa):
 
         # get the max score
         max_score = max(all_scores)
+
         # if only one max score then move down the tree
         if all_scores.count(max_score) == 1:
             # get the taxid for max scoring child
@@ -143,22 +182,43 @@ def get_mapping(taxids, intvs, taxa):
 
 def perform_counting(sam, ref2tax, taxa):
     tax_count = defaultdict(int)
+    read_count = 0
+    not_found = []
     with open(sam) as f:
         for line in f:
+            # progress monitor
+            read_count += 1
+            if(read_count%hundk == 0):
+                print("\r {} Processed Reads".format(read_count), end="")
+                sys.stdout.flush()
+
             rid, n_alns = line.strip().split()
+
             taxids = []
             intvs = []
             for _ in range(int(n_alns)):
                 toks = f.next().strip().split()
-                ref_taxid = ref2tax[ toks[0] ]
+                try:
+                    ref_taxid = ref2tax[ toks[0] ]
+                except:
+                    not_found.append(toks[0])
+                    continue
                 n_intvs = int(toks[1])
                 intv = []
                 for i in range(2, 2*n_intvs+2, 2):
                     intv.append((toks[i], toks[i+1]))
                 taxids.append(ref_taxid)
                 intvs.append(intv)
-            key_taxid = get_mapping(taxids, intvs, taxa)
+
+            if len(taxids) == 0:
+                continue
+
+            key_taxid = get_best_mapping(taxids, intvs, taxa)
             tax_count[key_taxid] += 1
+
+    print("\nTotal {} reference ids not found"
+          " and missed {} alignments".format(len(set(not_found)),
+                                             len(not_found)))
     return tax_count
 
 @click.command()
@@ -173,7 +233,11 @@ def run(sam):
     # do the counting operation
     tax_count = perform_counting(sam, ref2tax, taxa)
 
-    print(len(tax_count))
+    cwd = os.getcwd()
+    with open(cwd+"/report.txt", 'w') as f:
+        f.write("Feature\tCount\n")
+        for k,v in tax_count.items():
+            f.write( str(k) +"\t"+str(v)+"\n")
 
 if __name__=="__main__":
     run()
