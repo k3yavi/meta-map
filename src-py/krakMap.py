@@ -7,6 +7,7 @@ import click
 import sys
 from collections import defaultdict
 import random
+import numpy as np
 
 hund = 100
 hundk = 100000
@@ -251,20 +252,38 @@ def get_correlation(df_list, names):
     print("Number of common species: {}".format(len(com_all)))
     ct = pd.concat([ x.loc[list(com_all)] for x in df_list ], axis=1)
     print(ct.corr(method="spearman"))
+    return com_all
 
 
-def print_correlation(tax_count, taxa):
+def get_ards(df_list, tr_list):
+    for df in df_list:
+        df = df.loc[tr_list]
+    ct = pd.concat([df for df in df_list], axis=1)
+    mm_ards = np.abs(ct["truth"] - ct["MM"]) / ct["truth"]
+    kr_ards = np.abs(ct["truth"] - ct["kraken"]) / ct["truth"]
+
+    mmard = np.mean( np.abs(ct["truth"] - ct["MM"]) / ct["truth"] )
+    kmard = np.mean( np.abs(ct["truth"] - ct["kraken"]) / ct["truth"] )
+    kumard = np.mean( np.abs(ct["truth"] - ct["kraken_unfiltered"]) / ct["truth"] )
+    umard = np.mean( np.abs(ct["truth"] - ct["Unique"]) / ct["truth"] )
+
+    print("MARDS")
+    print("MM, Unique, kraken, kraken_unfiltered")
+    print(mmard, umard, kmard, kumard)
+    return mmard, umard, kmard, kumard
+
+def print_correlation(tax_count, tax_count_unq, taxa, dataset):
     print("Reading truth")
-    with open("/mnt/scratch2/avi/meta-map/kraken/meta/truth_hc1.txt") as f:
-        truth = pd.read_table(f).set_index("taxid").drop(["species",
-                                                          "size",
-                                                          "dataset"], 1)
+    with open("/mnt/scratch2/avi/meta-map/kraken/meta/truth.txt") as f:
+        truth = pd.read_table(f).set_index("taxid")
+    truth = truth[ "Huttenhower_"+dataset == truth["dataset"] ]
+    truth = truth.drop(["dataset", "species", "size"], 1)
+    truth.columns = ["truth"]
 
     print("Reading kraken")
-    with open("/mnt/scratch2/avi/meta-map/kraken/report/non_zero.txt") as f:
-        krak = pd.read_table(f, header=None, sep=" ").set_index(1).drop([0])
-
-    krDict = krak.to_dict()[0]
+    with open("/mnt/scratch2/avi/meta-map/kraken/krakOut/"+dataset+".rpt") as f:
+        krak = pd.read_table(f, header=None).set_index(4).drop([0,1,3,5],1).drop([0])
+    krDict = krak.to_dict()[2]
     new_kr = defaultdict(int)
     for tid,ct in krDict.items():
         if tid not in taxa.pruning_nodes:
@@ -276,41 +295,71 @@ def print_correlation(tax_count, taxa):
         new_kr[tid] += ct
 
     krak = pd.DataFrame(new_kr.items()).set_index(0)
+    krak.columns = ["kraken"]
     krDict = []
+    new_kr = []
 
-    with open("krak.txt", 'w') as f:
-        for k,v in new_kr.items():
-            if k in truth.index:
-                f.write(str(k)+"\t"+str(v)+"\n")
+    print("Reading kraken")
+    with open("/mnt/scratch2/avi/meta-map/kraken/krakOut/"+dataset+"_unfilt.rpt") as f:
+        krak_unft = pd.read_table(f, header=None).set_index(4).drop([0,1,3,5],1).drop([0])
+    krDict_unft = krak_unft.to_dict()[2]
+    new_kr = defaultdict(int)
+    for tid,ct in krDict_unft.items():
+        if tid not in taxa.pruning_nodes:
+            path = taxa.get_path(tid)
+            for node in path:
+                if node in taxa.pruning_nodes:
+                    tid = node
+                    break
+        new_kr[tid] += ct
+    krak_unft = pd.DataFrame(new_kr.items()).set_index(0)
+    krak_unft.columns = ["kraken_unfiltered"]
+    krDict_unft = []
+    new_kr = []
 
 
     print("Reading Puff")
     puff = pd.DataFrame(tax_count.items()).set_index(0)
+    puff.columns = ["MM"]
 
-    get_correlation([truth, krak, puff], ["truth", "kraken", "Puff"])
-    get_correlation([truth, puff], ["truth", "Puff"])
-    get_correlation([truth, krak], ["truth", "kraken"])
-    get_correlation([krak, puff], ["kraken", "Puff"])
+    print("Reading Puff")
+    puff_unq = pd.DataFrame(tax_count_unq.items()).set_index(0)
+    puff_unq.columns = ["Unique"]
 
+    com_all = get_correlation([truth, krak, krak_unft, puff, puff_unq],
+                              ["truth", "kraken", "kraken-unfiltered", "Puff_MM", "Puff_Unq"])
+    #get_correlation([truth, puff], ["truth", "Puff"])
+    #get_correlation([truth, krak], ["truth", "kraken"])
+    #get_correlation([krak, puff], ["kraken", "Puff"])
+
+    return get_ards([truth, puff, krak, krak_unft, puff_unq], com_all)
 
 @click.command()
-@click.option('--sam',  help='sam/sam-type pre-processed file')
 @click.option('--level',  help='base level to get counts for')
-def run(sam, level):
-    # read in taxonomy information from the nodes.dmp file
-    taxa = read_taxa(level)
+def run(level):
+    dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
+    datasets = ["HC1", "HC2", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8"]
+    mards = []
 
-    # read in reference to taxa map
-    ref2tax = read_map()
+    for ds in datasets:
+        # read in taxonomy information from the nodes.dmp file
+        taxa = read_taxa(level)
 
-    # do the counting operation
-    tax_count = perform_counting(sam, ref2tax, taxa)
+        # read in reference to taxa map
+        ref2tax = read_map()
 
-    # write the counted taxa
-    write_taxa_count(tax_count, taxa)
+        # do the counting operation
+        tax_count = perform_counting(dir+ds+".dmp", ref2tax, taxa)
+        tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax, taxa)
 
-    # report the correlation
-    print_correlation(tax_count, taxa)
+        # write the counted taxa
+        # write_taxa_count(tax_count, taxa)
+
+        # report the correlation
+        mards.append( print_correlation(tax_count, tax_count_unq, taxa, ds) )
+
+    print (mards)
+
 
 if __name__=="__main__":
     run()
