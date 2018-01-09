@@ -276,8 +276,13 @@ def print_correlation(tax_count, taxa):
         new_kr[tid] += ct
 
     krak = pd.DataFrame(new_kr.items()).set_index(0)
-    new_kr = []
     krDict = []
+
+    with open("krak.txt", 'w') as f:
+        for k,v in new_kr.items():
+            if k in truth.index:
+                f.write(str(k)+"\t"+str(v)+"\n")
+
 
     print("Reading Puff")
     puff = pd.DataFrame(tax_count.items()).set_index(0)
