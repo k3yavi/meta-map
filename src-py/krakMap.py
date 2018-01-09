@@ -12,19 +12,24 @@ hund = 100
 hundk = 100000
 
 class Taxa:
-    def __init__(self):
+    def __init__(self, level):
+        self.prune_level = level
         self.leaves = set([])
+        self.pruning_nodes = set([])
         self.internal_nodes = set([1])
         self.num_nodes = 0
         self.tree = defaultdict(int)
 
-    def insert(self, tid, pid):
+    def insert(self, tid, pid, rank):
         if type(tid) == int and type(pid) == int:
             self.tree[tid] = pid
             self.num_nodes += 1
         else:
             print("ERROR: Non integer nodes for taxa tree")
-            exit(1)
+            sys.exit(1)
+
+        if rank == self.prune_level:
+            self.pruning_nodes.add(tid)
 
         # Hackish online counting of internal and leaf nodes
         # Check if you have time
@@ -41,7 +46,7 @@ class Taxa:
             return self.tree[tid]
         except:
             print ("ERROR: taxid not found in the tree")
-            exit(1)
+            sys.exit(1)
 
     def get_path(self, tid):
         p_tid = tid
@@ -68,7 +73,7 @@ class Tree:
             return len(self.coverage[tid])
         except:
             print("ERROR: {} not found in subtree".format(tid))
-            exit(1)
+            sys.exit(1)
 
     def get_coverage(self, intvs, node="int"):
         nums = set([])
@@ -115,14 +120,14 @@ class Tree:
                 self.coverage[node] = self.get_coverage(child_intvs)
                 nodes.discard(node)
 
-def read_taxa():
+def read_taxa(level):
     tf = "/mnt/scratch2/avi/meta-map/kraken/KrakenDB/taxonomy/nodes.dmp"
     # create taxa object
-    taxa = Taxa()
+    taxa = Taxa(level)
     with open(tf) as f:
         for line in f:
             toks = line.rstrip("\t|\n").split("\t|\t")
-            taxa.insert(int(toks[0]), int(toks[1]))
+            taxa.insert(int(toks[0]), int(toks[1]), toks[2])
 
     num_internal = float(len(taxa.internal_nodes))
     num_leaves = float(len(taxa.leaves))
@@ -143,10 +148,10 @@ def get_best_mapping(taxids, intvs, taxa):
     if(n_maps != len(intvs)):
         print("ERROR: number of intervals not consistent with # of refs")
         print("Exiting")
-        exit(1)
+        sys.exit(1)
 
-    if n_maps == 1:
-        return taxids[0]
+    #if n_maps == 1:
+    #    return taxids[0]
 
     paths = []
     for taxid in taxids:
@@ -178,6 +183,14 @@ def get_best_mapping(taxids, intvs, taxa):
 
         # if found ambiguous multiple paths then prune the tree
         break
+
+    if head not in taxa.pruning_nodes:
+        # collapse this to required level
+        path = taxa.get_path(head)
+        for node in path:
+            if node in taxa.pruning_nodes:
+                head = node
+                break
     return head
 
 def perform_counting(sam, ref2tax, taxa):
@@ -221,11 +234,66 @@ def perform_counting(sam, ref2tax, taxa):
                                              len(not_found)))
     return tax_count
 
+def write_taxa_count(tax_count, taxa):
+    cwd = os.getcwd()
+    with open(cwd+"/report.txt", 'w') as f:
+        f.write("Feature\tCount\n")
+        for k,v in tax_count.items():
+            f.write( str(k) +"\t"+str(v)+"\n")
+
+def get_correlation(df_list, names):
+    com_all = set(df_list[0].index)
+    for df in df_list:
+        com_all &= set(df.index)
+    print("\n\nInital Shapes: ", end="")
+    for idx,df in enumerate(df_list):
+        print(names[idx]+":"+str(df.shape)+"\t", end="")
+    print("Number of common species: {}".format(len(com_all)))
+    ct = pd.concat([ x.loc[list(com_all)] for x in df_list ], axis=1)
+    print(ct.corr(method="spearman"))
+
+
+def print_correlation(tax_count, taxa):
+    print("Reading truth")
+    with open("/mnt/scratch2/avi/meta-map/kraken/meta/truth_hc1.txt") as f:
+        truth = pd.read_table(f).set_index("taxid").drop(["species",
+                                                          "size",
+                                                          "dataset"], 1)
+
+    print("Reading kraken")
+    with open("/mnt/scratch2/avi/meta-map/kraken/report/non_zero.txt") as f:
+        krak = pd.read_table(f, header=None, sep=" ").set_index(1).drop([0])
+
+    krDict = krak.to_dict()[0]
+    new_kr = defaultdict(int)
+    for tid,ct in krDict.items():
+        if tid not in taxa.pruning_nodes:
+            path = taxa.get_path(tid)
+            for node in path:
+                if node in taxa.pruning_nodes:
+                    tid = node
+                    break
+        new_kr[tid] += ct
+
+    krak = pd.DataFrame(new_kr.items()).set_index(0)
+    new_kr = []
+    krDict = []
+
+    print("Reading Puff")
+    puff = pd.DataFrame(tax_count.items()).set_index(0)
+
+    get_correlation([truth, krak, puff], ["truth", "kraken", "Puff"])
+    get_correlation([truth, puff], ["truth", "Puff"])
+    get_correlation([truth, krak], ["truth", "kraken"])
+    get_correlation([krak, puff], ["kraken", "Puff"])
+
+
 @click.command()
 @click.option('--sam',  help='sam/sam-type pre-processed file')
-def run(sam):
+@click.option('--level',  help='base level to get counts for')
+def run(sam, level):
     # read in taxonomy information from the nodes.dmp file
-    taxa = read_taxa()
+    taxa = read_taxa(level)
 
     # read in reference to taxa map
     ref2tax = read_map()
@@ -233,11 +301,11 @@ def run(sam):
     # do the counting operation
     tax_count = perform_counting(sam, ref2tax, taxa)
 
-    cwd = os.getcwd()
-    with open(cwd+"/report.txt", 'w') as f:
-        f.write("Feature\tCount\n")
-        for k,v in tax_count.items():
-            f.write( str(k) +"\t"+str(v)+"\n")
+    # write the counted taxa
+    write_taxa_count(tax_count, taxa)
+
+    # report the correlation
+    print_correlation(tax_count, taxa)
 
 if __name__=="__main__":
     run()
