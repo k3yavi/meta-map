@@ -386,8 +386,13 @@ def make_boxplot(mards, corrs, level):
 @click.option('--report',  is_flag=True,  help='report counts or not', default=False)
 @click.option('--plot', is_flag=True,  help='report counts or not')
 @click.option('--ds',  help='specific dataset')
-def run(level, report, ds, plot):
-    dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
+@click.option('--base',  help='new base path')
+def run(level, report, ds, plot, base):
+    if base == None:
+        dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
+    else:
+        dir = base
+
     if ds == None:
         datasets = ["HC1", "HC2", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8"]
     else:
