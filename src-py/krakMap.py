@@ -49,11 +49,10 @@ class Taxa:
                 self.internal_nodes.add(pid)
 
     def get_parent(self, tid):
-        try:
+        if tid in self.tree:
             return self.tree[tid]
-        except:
-            print ("ERROR: taxid not found in the tree")
-            sys.exit(1)
+        else:
+            return 1
 
     def get_path(self, tid):
         p_tid = tid
@@ -80,7 +79,6 @@ class Tree:
             return len(self.coverage[tid])
         except:
             print("ERROR: {} not found in subtree".format(tid))
-            sys.exit(1)
 
     def get_coverage(self, intvs, node="int"):
         nums = set([])
@@ -281,6 +279,19 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset):
         truth = pd.read_table(f).set_index("taxid")
     truth = truth[ "Huttenhower_"+dataset == truth["dataset"] ]
     truth = truth.drop(["dataset", "species", "size"], 1)
+
+    trDict = truth.to_dict()["counts"]
+    new_kr = defaultdict(int)
+    for tid,ct in trDict.items():
+        if tid not in taxa.pruning_nodes:
+            path = taxa.get_path(tid)
+            for node in path:
+                if node in taxa.pruning_nodes:
+                    tid = node
+                    break
+        new_kr[tid] += ct
+
+    truth = pd.DataFrame(new_kr.items()).set_index(0)
     truth.columns = ["truth"]
 
     print("Reading kraken")
@@ -359,85 +370,21 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset):
 
     return mards, corrs
 
-def make_boxplot(mards, corrs):
-    sns.set(style="ticks")
+def make_boxplot(mards, corrs, level):
+    smzip = [[s,m] for sp,ma in zip(corrs, mards) for s,m in zip(sp, ma)]
 
-    # Initialize the figure with a logarithmic x axis
-    f, ax = plt.subplots(figsize=(7, 6))
-    ax.set_yscale("log")
-
-
-    planets = pd.DataFrame(columns=['method', 'Spearman'])
-    i = 0
-    # for mm, un, krk, krun in data:
-    for krk, krun, mm, un in corrs:
-        planets.loc[i] = ["kraken", krk]
-        i += 1
-        planets.loc[i] = ["kraken_unfiltered", krun]
-        i += 1
-        planets.loc[i] = ["Puff_MM", mm]
-        i += 1
-        planets.loc[i] = ["Puff_Unique", un]
-        i += 1
-
-    # Plot the orbital period with horizontal boxes
-    sns.boxplot(x="method", y="Spearman", data=planets,
-                whis=np.inf)
-
-    # Add in points to show each observation
-    sns.swarmplot(y="Spearman", x="method", data=planets,
-                  size=2, color=".3", linewidth=0)
-
-    # Tweak the visual presentation
-    ax.xaxis.grid(True)
-    ax.set(ylabel="")
-    sns.despine(trim=True, left=True)
-
-    plt.title("Across 10 datasets")
+    df = pd.DataFrame(smzip, columns=["Spearman", "mards"])
+    df['method'] = pd.Series(["Kraken", "kraken-unfilter", "Puff_MM", "Puff_Unique"]*10)
+    dd=pd.melt(df, id_vars=['method'], value_vars=["Spearman", "mards"], var_name='metric')
+    sns.boxplot(x='method', y='value', data=dd, hue='metric')
     plt.show()
-    plt.savfig("spearman.pdf")
-
-    fig.clear()
-    # Initialize the figure with a logarithmic x axis
-    f, ax = plt.subplots(figsize=(7, 6))
-    ax.set_yscale("log")
-
-
-    planets = pd.DataFrame(columns=['method', 'MARD'])
-    i = 0
-    # for mm, un, krk, krun in data:
-    for krk, krun, mm, un in mards:
-        planets.loc[i] = ["kraken", krk]
-        i += 1
-        planets.loc[i] = ["kraken_unfiltered", krun]
-        i += 1
-        planets.loc[i] = ["Puff_MM", mm]
-        i += 1
-        planets.loc[i] = ["Puff_Unique", un]
-        i += 1
-
-    # Plot the orbital period with horizontal boxes
-    sns.boxplot(x="method", y="MARD", data=planets,
-                whis=np.inf)
-
-    # Add in points to show each observation
-    sns.swarmplot(x="method", y="MARD", data=planets,
-                  size=2, color=".3", linewidth=0)
-
-    # Tweak the visual presentation
-    ax.xaxis.grid(True)
-    ax.set(ylabel="")
-    sns.despine(trim=True, left=True)
-
-    plt.title("Across 10 datasets")
-    plt.show()
-    plt.savfig("mards.pdf")
-
+    plt.title(level)
+    plt.savefig(level+".pdf")
 
 @click.command()
 @click.option('--level',  help='base level to get counts for')
 @click.option('--report',  is_flag=True,  help='report counts or not', default=False)
-@click.option('--plot',  is_flag=True,  help='report counts or not', default=False)
+@click.option('--plot', is_flag=True,  help='report counts or not')
 @click.option('--ds',  help='specific dataset')
 def run(level, report, ds, plot):
     dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
@@ -445,8 +392,10 @@ def run(level, report, ds, plot):
         datasets = ["HC1", "HC2", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8"]
     else:
         datasets = [ds]
-    mards = []
-    corrs = []
+    if level == "all":
+        levels = ["species", "genus", "family", "order", "class", "phylum"]
+    else:
+        levels = [level]
 
     # read in taxonomy information from the nodes.dmp file
     taxa = read_taxa(level)
@@ -454,26 +403,29 @@ def run(level, report, ds, plot):
     # read in reference to taxa map
     ref2tax = read_map()
 
-    for ds in datasets:
-        # do the counting operation
-        tax_count = perform_counting(dir+ds+".dmp", ref2tax, taxa)
-        tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax, taxa)
+    for level in levels:
+        mards = []
+        corrs = []
+        for ds in datasets:
+            # do the counting operation
+            tax_count = perform_counting(dir+ds+".dmp", ref2tax, taxa)
+            tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax, taxa)
 
-        if report:
-            # write the counted taxa
-            write_taxa_count(tax_count, tax_count_unq, taxa, ds)
+            if report:
+                # write the counted taxa
+                write_taxa_count(tax_count, tax_count_unq, taxa, ds)
 
-        # report the correlation
-        mard, corr = print_correlation(tax_count, tax_count_unq, taxa, ds)
+            # report the correlation
+            mard, corr = print_correlation(tax_count, tax_count_unq, taxa, ds)
 
-        mards.append(mard)
-        corrs.append(corr)
+            mards.append(mard)
+            corrs.append(corr)
 
-    if plot:
-        make_boxplot(mards, corrs)
-    else:
-        print (mards)
-        print (corrs)
+        if plot:
+            make_boxplot(mards, corrs, level, plot)
+        else:
+            print (mards)
+            print (corrs)
 
 if __name__=="__main__":
     run()
