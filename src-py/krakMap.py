@@ -148,6 +148,7 @@ def read_map():
         return pd.read_table(f, header=None).set_index(0).to_dict()[1]
 
 def get_best_mapping(taxids, intvs, taxa):
+    cov_threshold = 44
     n_maps = len(taxids)
 
     if(n_maps != len(intvs)):
@@ -165,6 +166,10 @@ def get_best_mapping(taxids, intvs, taxa):
     # make a small tree with only relevant taxids
     sub_tree = Tree(paths, intvs)
     head = sub_tree.root
+
+    if sub_tree.get_score(head) < cov_threshold:
+        return 0
+
     while( head not in sub_tree.leaves ):
         children = list(sub_tree.mappings[head])
         # if only one child the just go down the tree
@@ -179,6 +184,9 @@ def get_best_mapping(taxids, intvs, taxa):
 
         # get the max score
         max_score = max(all_scores)
+
+        if max_score < cov_threshold:
+            break
 
         # if only one max score then move down the tree
         if all_scores.count(max_score) == 1:
@@ -427,7 +435,7 @@ def run(level, report, ds, plot, base):
             corrs.append(corr)
 
         if plot:
-            make_boxplot(mards, corrs, level, plot)
+            make_boxplot(mards, corrs, level)
         else:
             print (mards)
             print (corrs)
