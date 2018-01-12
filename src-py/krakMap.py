@@ -148,7 +148,7 @@ def read_map():
         return pd.read_table(f, header=None).set_index(0).to_dict()[1]
 
 def get_best_mapping(taxids, intvs, taxa):
-    cov_threshold = 44
+    cov_threshold = 38
     n_maps = len(taxids)
 
     if(n_maps != len(intvs)):
@@ -281,7 +281,7 @@ def get_ards(ct_df, name):
     print(mard)
     return mard
 
-def print_correlation(tax_count, tax_count_unq, taxa, dataset):
+def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
     print("Reading truth")
     with open("/mnt/scratch2/avi/meta-map/kraken/meta/truth.txt") as f:
         truth = pd.read_table(f).set_index("taxid")
@@ -298,7 +298,11 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset):
                     tid = node
                     break
         new_kr[tid] += ct
-
+    if report_kraken != None:
+        with open(os.getcwd()+"/truth_report.txt", 'w') as f:
+            f.write("Feature\tCount\n")
+            for k,v in new_kr.items():
+                f.write( str(k) +"\t"+str(v)+"\n")
     truth = pd.DataFrame(new_kr.items()).set_index(0)
     truth.columns = ["truth"]
 
@@ -315,6 +319,12 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset):
                     tid = node
                     break
         new_kr[tid] += ct
+
+    if report_kraken != None:
+        with open(os.getcwd()+"/krak_report.txt", 'w') as f:
+            f.write("Feature\tCount\n")
+            for k,v in new_kr.items():
+                f.write( str(k) +"\t"+str(v)+"\n")
 
     krak = pd.DataFrame(new_kr.items()).set_index(0)
     krak.columns = ["kraken"]
@@ -388,14 +398,16 @@ def make_boxplot(mards, corrs, level):
     plt.show()
     plt.title(level)
     plt.savefig(level+".pdf")
+    plt.clf()
 
 @click.command()
 @click.option('--level',  help='base level to get counts for')
 @click.option('--report',  is_flag=True,  help='report counts or not', default=False)
 @click.option('--plot', is_flag=True,  help='report counts or not')
+@click.option('--rpt_krk', is_flag=True,  help='report counts or not', default=False)
 @click.option('--ds',  help='specific dataset')
 @click.option('--base',  help='new base path')
-def run(level, report, ds, plot, base):
+def run(level, report, ds, plot, base, rpt_krk):
     if base == None:
         dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
     else:
@@ -433,7 +445,7 @@ def run(level, report, ds, plot, base):
                 write_taxa_count(tax_count, tax_count_unq, taxa, ds)
 
             # report the correlation
-            mard, corr = print_correlation(tax_count, tax_count_unq, taxa, ds)
+            mard, corr = print_correlation(tax_count, tax_count_unq, taxa, ds, rpt_krk)
 
             mards.append(mard)
             corrs.append(corr)
