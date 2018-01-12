@@ -67,16 +67,20 @@ class Taxa:
 
 # class for inverted parent -> child subtree
 class Tree:
-    def __init__(self, paths, intvs):
+    def __init__(self, paths, intvs, rlen):
         self.mappings = defaultdict(set)
         self.coverage = defaultdict(set)
         self.leaves = []
         self.root = 1
+        self.rlen = rlen
         self.populate_tree(paths, intvs)
 
     def get_score(self, tid):
         try:
-            return len(self.coverage[tid])
+            if self.rlen == 0.0:
+                return len(self.coverage[tid])
+            else:
+                return len(self.coverage[tid])/self.rlen
         except:
             print("ERROR: {} not found in subtree".format(tid))
 
@@ -147,9 +151,13 @@ def read_map():
     with open(ref) as f:
         return pd.read_table(f, header=None).set_index(0).to_dict()[1]
 
-def get_best_mapping(taxids, intvs, taxa):
-    cov_threshold = 38
+def get_best_mapping(taxids, intvs,
+                     taxa, rlen=0.0):
+    cov_threshold = 44
+    if rlen != 0.0:
+        cov_threshold /= 100
     n_maps = len(taxids)
+    rlen = float(rlen)
 
     if(n_maps != len(intvs)):
         print("ERROR: number of intervals not consistent with # of refs")
@@ -164,7 +172,7 @@ def get_best_mapping(taxids, intvs, taxa):
         paths.append( taxa.get_path(taxid) )
 
     # make a small tree with only relevant taxids
-    sub_tree = Tree(paths, intvs)
+    sub_tree = Tree(paths, intvs, rlen)
     head = sub_tree.root
 
     if sub_tree.get_score(head) < cov_threshold:
@@ -207,7 +215,7 @@ def get_best_mapping(taxids, intvs, taxa):
                 break
     return head
 
-def perform_counting(sam, ref2tax, taxa):
+def perform_counting(sam, ref2tax, taxa, use_ratio):
     tax_count = defaultdict(int)
     read_count = 0
     not_found = []
@@ -219,7 +227,10 @@ def perform_counting(sam, ref2tax, taxa):
                 print("\r {} Processed Reads".format(read_count), end="")
                 sys.stdout.flush()
 
-            rid, n_alns = line.strip().split()
+            if use_ratio:
+                rid, n_alns, rlen = line.strip().split()
+            else:
+                rid, n_alns = line.strip().split()
 
             taxids = []
             intvs = []
@@ -240,7 +251,11 @@ def perform_counting(sam, ref2tax, taxa):
             if len(taxids) == 0:
                 continue
 
-            key_taxid = get_best_mapping(taxids, intvs, taxa)
+            if use_ratio:
+                key_taxid = get_best_mapping(taxids, intvs,
+                                             taxa, rlen)
+            else:
+                key_taxid = get_best_mapping(taxids, intvs, taxa)
             tax_count[key_taxid] += 1
 
     print("\nTotal {} reference ids not found"
@@ -405,9 +420,10 @@ def make_boxplot(mards, corrs, level):
 @click.option('--report',  is_flag=True,  help='report counts or not', default=False)
 @click.option('--plot', is_flag=True,  help='report counts or not')
 @click.option('--rpt_krk', is_flag=True,  help='report counts or not', default=False)
+@click.option('--score_ratio', is_flag=True,  help='report counts or not', default=False)
 @click.option('--ds',  help='specific dataset')
 @click.option('--base',  help='new base path')
-def run(level, report, ds, plot, base, rpt_krk):
+def run(level, report, ds, plot, base, rpt_krk, score_ratio):
     if base == None:
         dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
     else:
@@ -437,8 +453,10 @@ def run(level, report, ds, plot, base, rpt_krk):
             print ("Analysing -> {}, {}".format(level, ds))
 
             # do the counting operation
-            tax_count = perform_counting(dir+ds+".dmp", ref2tax, taxa)
-            tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax, taxa)
+            tax_count = perform_counting(dir+ds+".dmp", ref2tax,
+                                         taxa, score_ratio)
+            tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax,
+                                             taxa, score_ratio)
 
             if report:
                 # write the counted taxa
