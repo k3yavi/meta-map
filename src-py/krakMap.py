@@ -405,21 +405,25 @@ def run(level, report, ds, plot, base):
         datasets = ["HC1", "HC2", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8"]
     else:
         datasets = [ds]
+
     if level == "all":
         levels = ["species", "genus", "family", "order", "class", "phylum"]
     else:
         levels = [level]
 
-    # read in taxonomy information from the nodes.dmp file
-    taxa = read_taxa(level)
-
-    # read in reference to taxa map
-    ref2tax = read_map()
 
     for level in levels:
+        # read in taxonomy information from the nodes.dmp file
+        taxa = read_taxa(level)
+
+        # read in reference to taxa map
+        ref2tax = read_map()
+
         mards = []
         corrs = []
         for ds in datasets:
+            print ("Analysing -> {}, {}".format(level, ds))
+
             # do the counting operation
             tax_count = perform_counting(dir+ds+".dmp", ref2tax, taxa)
             tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax, taxa)
