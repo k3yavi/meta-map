@@ -153,11 +153,11 @@ def read_map():
 
 def get_best_mapping(taxids, intvs,
                      taxa, rlen=0.0):
-    cov_threshold = 44
+    cov_threshold = float(38)
     if rlen != 0.0:
         cov_threshold /= 100
+
     n_maps = len(taxids)
-    rlen = float(rlen)
 
     if(n_maps != len(intvs)):
         print("ERROR: number of intervals not consistent with # of refs")
@@ -230,7 +230,7 @@ def perform_counting(sam, ref2tax, taxa, use_ratio):
             if use_ratio:
                 rid, n_alns, rlen = line.strip().split()
             else:
-                rid, n_alns = line.strip().split()
+                rid, n_alns, _ = line.strip().split()
 
             taxids = []
             intvs = []
@@ -253,7 +253,7 @@ def perform_counting(sam, ref2tax, taxa, use_ratio):
 
             if use_ratio:
                 key_taxid = get_best_mapping(taxids, intvs,
-                                             taxa, rlen)
+                                             taxa, float(rlen))
             else:
                 key_taxid = get_best_mapping(taxids, intvs, taxa)
             tax_count[key_taxid] += 1
@@ -313,7 +313,7 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
                     tid = node
                     break
         new_kr[tid] += ct
-    if report_kraken != None:
+    if report_kraken:
         with open(os.getcwd()+"/truth_report.txt", 'w') as f:
             f.write("Feature\tCount\n")
             for k,v in new_kr.items():
@@ -335,7 +335,7 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
                     break
         new_kr[tid] += ct
 
-    if report_kraken != None:
+    if report_kraken:
         with open(os.getcwd()+"/krak_report.txt", 'w') as f:
             f.write("Feature\tCount\n")
             for k,v in new_kr.items():
