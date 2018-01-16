@@ -67,13 +67,13 @@ class Taxa:
 
 # class for inverted parent -> child subtree
 class Tree:
-    def __init__(self, paths, intvs, rlen):
+    def __init__(self, rid, paths, intvs, rlen):
         self.mappings = defaultdict(set)
         self.coverage = defaultdict(set)
         self.leaves = []
         self.root = 1
         self.rlen = rlen
-        self.populate_tree(paths, intvs)
+        self.populate_tree(paths, intvs, rid)
 
     def get_score(self, tid):
         try:
@@ -95,7 +95,7 @@ class Tree:
                 nums |= intv
         return nums
 
-    def populate_tree(self, paths, intvs):
+    def populate_tree(self, paths, intvs, read_id=""):
         nodes = set([])
         for idx, path in enumerate(paths):
             leaf = path[0]
@@ -129,6 +129,12 @@ class Tree:
                 self.coverage[node] = self.get_coverage(child_intvs)
                 nodes.discard(node)
 
+        if read_id == "mex_2834952_2835118_10b3d":
+            print ("\n")
+            for k,v in self.coverage.items():
+                print(str(k)+"\t"+str(self.get_score(k)))
+            exit(0)
+
 def read_taxa(level):
     tf = "/mnt/scratch2/avi/meta-map/kraken/KrakenDB/taxonomy/nodes.dmp"
     # create taxa object
@@ -151,9 +157,10 @@ def read_map():
     with open(ref) as f:
         return pd.read_table(f, header=None).set_index(0).to_dict()[1]
 
-def get_best_mapping(taxids, intvs,
-                     taxa, rlen=0.0):
-    cov_threshold = float(38)
+def get_best_mapping(rid, taxids, intvs,
+                     taxa, rlen=0.0,
+                     print_score=False):
+    cov_threshold = float(0.0)
     if rlen != 0.0:
         cov_threshold /= 100
 
@@ -172,7 +179,7 @@ def get_best_mapping(taxids, intvs,
         paths.append( taxa.get_path(taxid) )
 
     # make a small tree with only relevant taxids
-    sub_tree = Tree(paths, intvs, rlen)
+    sub_tree = Tree(rid, paths, intvs, rlen)
     head = sub_tree.root
 
     if sub_tree.get_score(head) < cov_threshold:
@@ -213,16 +220,19 @@ def get_best_mapping(taxids, intvs,
             if node in taxa.pruning_nodes:
                 head = node
                 break
-    return head
+    if (print_score):
+        return head, sub_tree.get_score(head)
+    else:
+        return head
 
-def perform_counting(sam, ref2tax, taxa, use_ratio):
+def perform_counting(sam, ref2tax, taxa,
+                     use_ratio, print_score):
     tax_count = defaultdict(int)
     read_count = 0
     not_found = []
     with open(sam) as f:
         for line in f:
             # progress monitor
-            read_count += 1
             if(read_count%hundk == 0):
                 print("\r {} Processed Reads".format(read_count), end="")
                 sys.stdout.flush()
@@ -249,15 +259,28 @@ def perform_counting(sam, ref2tax, taxa, use_ratio):
                 intvs.append(intv)
 
             if len(taxids) == 0:
+                read_count += 1
                 continue
 
             if use_ratio:
-                key_taxid = get_best_mapping(taxids, intvs,
-                                             taxa, float(rlen))
+                if print_score:
+                    key_taxid, score = get_best_mapping(rid, taxids, intvs,
+                                                        taxa, float(rlen),
+                                                        True)
+                    print (rid, score, file=sys.stderr)
+                else:
+                    key_taxid = get_best_mapping(rid, taxids, intvs,
+                                                 taxa, float(rlen))
             else:
-                key_taxid = get_best_mapping(taxids, intvs, taxa)
-            tax_count[key_taxid] += 1
+                if print_score:
+                    key_taxid, score = get_best_mapping(rid, taxids, intvs, taxa,
+                                                        0.0, True)
+                    print (rid, score, file=sys.stderr)
+                else:
+                    key_taxid = get_best_mapping(rid, taxids, intvs, taxa)
 
+            tax_count[key_taxid] += 1
+    print("\nSaw total {} reads".format(read_count))
     print("\nTotal {} reference ids not found"
           " and missed {} alignments".format(len(set(not_found)),
                                              len(not_found)))
@@ -423,7 +446,8 @@ def make_boxplot(mards, corrs, level):
 @click.option('--score_ratio', is_flag=True,  help='report counts or not', default=False)
 @click.option('--ds',  help='specific dataset')
 @click.option('--base',  help='new base path')
-def run(level, report, ds, plot, base, rpt_krk, score_ratio):
+@click.option('--print_score',  is_flag=True, help='should print read level score', default=False)
+def run(level, report, ds, plot, base, rpt_krk, score_ratio, print_score):
     if base == None:
         dir = "/mnt/scratch2/avi/meta-map/kraken/puff/dmps/"
     else:
@@ -454,9 +478,11 @@ def run(level, report, ds, plot, base, rpt_krk, score_ratio):
 
             # do the counting operation
             tax_count = perform_counting(dir+ds+".dmp", ref2tax,
-                                         taxa, score_ratio)
+                                         taxa, score_ratio,
+                                         print_score)
             tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax,
-                                             taxa, score_ratio)
+                                             taxa, score_ratio,
+                                             print_score)
 
             if report:
                 # write the counted taxa
