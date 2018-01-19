@@ -17,6 +17,7 @@ import seaborn as sns
 
 hund = 100
 hundk = 100000
+qread = ""
 
 class Taxa:
     def __init__(self, level):
@@ -129,11 +130,10 @@ class Tree:
                 self.coverage[node] = self.get_coverage(child_intvs)
                 nodes.discard(node)
 
-        if read_id == "mex_2834952_2835118_10b3d":
+        if read_id == qread:
             print ("\n")
             for k,v in self.coverage.items():
                 print(str(k)+"\t"+str(self.get_score(k)))
-            exit(0)
 
 def read_taxa(level):
     tf = "/mnt/scratch2/avi/meta-map/kraken/KrakenDB/taxonomy/nodes.dmp"
@@ -160,7 +160,7 @@ def read_map():
 def get_best_mapping(rid, taxids, intvs,
                      taxa, rlen=0.0,
                      print_score=False):
-    cov_threshold = float(0.0)
+    cov_threshold = float(44)
     if rlen != 0.0:
         cov_threshold /= 100
 
@@ -220,6 +220,9 @@ def get_best_mapping(rid, taxids, intvs,
             if node in taxa.pruning_nodes:
                 head = node
                 break
+    if rid == qread:
+        print (head)
+        exit(0)
     if (print_score):
         return head, sub_tree.get_score(head)
     else:
@@ -259,8 +262,9 @@ def perform_counting(sam, ref2tax, taxa,
                 intvs.append(intv)
 
             if len(taxids) == 0:
-                read_count += 1
                 continue
+            else:
+                read_count += 1
 
             if use_ratio:
                 if print_score:
@@ -389,11 +393,11 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
 
 
     print("Reading Puff")
-    puff = pd.DataFrame(tax_count.items()).set_index(0)
+    puff = pd.DataFrame(tax_count.items()).set_index(0).drop([0])
     puff.columns = ["MM"]
 
     print("Reading Puff")
-    puff_unq = pd.DataFrame(tax_count_unq.items()).set_index(0)
+    puff_unq = pd.DataFrame(tax_count_unq.items()).set_index(0).drop([0])
     puff_unq.columns = ["Unique"]
 
     mards = []
