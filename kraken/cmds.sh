@@ -20,16 +20,16 @@
 #../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC8.fasta.gz -p 15 -m -o puff/dmps/LC8_unq.dmp  -k 
 
 
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_HC1.fasta.gz -p 15 -m -o puff/dmps/HC1.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_HC2.fasta.gz -p 15 -m -o puff/dmps/HC2.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC1.fasta.gz -p 15 -m -o puff/dmps/LC1.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC2.fasta.gz -p 15 -m -o puff/dmps/LC2.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC3.fasta.gz -p 15 -m -o puff/dmps/LC3.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC4.fasta.gz -p 15 -m -o puff/dmps/LC4.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC5.fasta.gz -p 15 -m -o puff/dmps/LC5.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC6.fasta.gz -p 15 -m -o puff/dmps/LC6.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC7.fasta.gz -p 15 -m -o puff/dmps/LC7.dmp  -k --scoreRatio 1.0
-../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC8.fasta.gz -p 15 -m -o puff/dmps/LC8.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_HC1.fasta.gz -p 15 -m -o puff/N_dmps/HC1.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_HC2.fasta.gz -p 15 -m -o puff/N_dmps/HC2.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC1.fasta.gz -p 15 -m -o puff/N_dmps/LC1.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC2.fasta.gz -p 15 -m -o puff/N_dmps/LC2.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC3.fasta.gz -p 15 -m -o puff/N_dmps/LC3.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC4.fasta.gz -p 15 -m -o puff/N_dmps/LC4.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC5.fasta.gz -p 15 -m -o puff/N_dmps/LC5.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC6.fasta.gz -p 15 -m -o puff/N_dmps/LC6.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC7.fasta.gz -p 15 -m -o puff/N_dmps/LC7.dmp  -k --scoreRatio 1.0
+../../pufferfish/build/src/pufferfish align -i puff/index --read reads/Huttenhower_LC8.fasta.gz -p 15 -m -o puff/N_dmps/LC8.dmp  -k --scoreRatio 1.0
 
 #kraken --db ./KrakenDB --threads 10 --fasta-input reads/Huttenhower_HC1.fasta.gz --gzip-compressed > krakOut/HC1.krk
 #kraken --db ./KrakenDB --threads 10 --fasta-input reads/Huttenhower_HC2.fasta.gz --gzip-compressed > krakOut/HC2.krk

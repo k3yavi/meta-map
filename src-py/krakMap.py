@@ -78,10 +78,7 @@ class Tree:
 
     def get_score(self, tid):
         try:
-            if self.rlen == 0.0:
-                return len(self.coverage[tid])
-            else:
-                return len(self.coverage[tid])/self.rlen
+            return len(self.coverage[tid])
         except:
             print("ERROR: {} not found in subtree".format(tid))
 
@@ -162,7 +159,8 @@ def get_best_mapping(rid, taxids, intvs,
                      print_score=False):
     cov_threshold = float(44)
     if rlen != 0.0:
-        cov_threshold /= 100
+        cov_threshold = rlen-((rlen-31+1)*0.8)
+        #cov_threshold /= 100
 
     n_maps = len(taxids)
 
@@ -297,10 +295,10 @@ def write_taxa_count(tax_count, tax_count_uniq, taxa, ds):
         for k,v in tax_count.items():
             f.write( str(k) +"\t"+str(v)+"\n")
 
-    with open(cwd+"/"+ ds + "_uniq_report.txt", 'w') as f:
-        f.write("Feature\tCount\n")
-        for k,v in tax_count_uniq.items():
-            f.write( str(k) +"\t"+str(v)+"\n")
+    #with open(cwd+"/"+ ds + "_uniq_report.txt", 'w') as f:
+    #    f.write("Feature\tCount\n")
+    #    for k,v in tax_count_uniq.items():
+    #        f.write( str(k) +"\t"+str(v)+"\n")
 
 
 def get_correlation(df_list, names):
@@ -373,32 +371,32 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
     krDict = []
     new_kr = []
 
-    print("Reading kraken")
-    with open("/mnt/scratch2/avi/meta-map/kraken/krakOut/"+dataset+"_unfilt.rpt") as f:
-        krak_unft = pd.read_table(f, header=None).set_index(4).drop([0,1,3,5],1).drop([0])
-    krDict_unft = krak_unft.to_dict()[2]
-    new_kr = defaultdict(int)
-    for tid,ct in krDict_unft.items():
-        if tid not in taxa.pruning_nodes:
-            path = taxa.get_path(tid)
-            for node in path:
-                if node in taxa.pruning_nodes:
-                    tid = node
-                    break
-        new_kr[tid] += ct
-    krak_unft = pd.DataFrame(new_kr.items()).set_index(0)
-    krak_unft.columns = ["kraken_unfiltered"]
-    krDict_unft = []
-    new_kr = []
+    #print("Reading kraken")
+    #with open("/mnt/scratch2/avi/meta-map/kraken/krakOut/"+dataset+"_unfilt.rpt") as f:
+    #    krak_unft = pd.read_table(f, header=None).set_index(4).drop([0,1,3,5],1).drop([0])
+    #krDict_unft = krak_unft.to_dict()[2]
+    #new_kr = defaultdict(int)
+    #for tid,ct in krDict_unft.items():
+    #    if tid not in taxa.pruning_nodes:
+    #        path = taxa.get_path(tid)
+    #        for node in path:
+    #            if node in taxa.pruning_nodes:
+    #                tid = node
+    #                break
+    #    new_kr[tid] += ct
+    #krak_unft = pd.DataFrame(new_kr.items()).set_index(0)
+    #krak_unft.columns = ["kraken_unfiltered"]
+    #krDict_unft = []
+    #new_kr = []
 
 
     print("Reading Puff")
     puff = pd.DataFrame(tax_count.items()).set_index(0).drop([0])
     puff.columns = ["MM"]
 
-    print("Reading Puff")
-    puff_unq = pd.DataFrame(tax_count_unq.items()).set_index(0).drop([0])
-    puff_unq.columns = ["Unique"]
+    #print("Reading Puff")
+    #puff_unq = pd.DataFrame(tax_count_unq.items()).set_index(0).drop([0])
+    #puff_unq.columns = ["Unique"]
 
     mards = []
     corrs = []
@@ -408,11 +406,11 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
     mards.append(mard)
     corrs.append(corr)
 
-    ct_df, corr = get_correlation([truth, krak_unft],
-                                  ["truth", "kraken-unfiltered"])
-    mard = get_ards(ct_df, "kraken_unfiltered")
-    mards.append(mard)
-    corrs.append(corr)
+    #ct_df, corr = get_correlation([truth, krak_unft],
+    #                              ["truth", "kraken-unfiltered"])
+    #mard = get_ards(ct_df, "kraken_unfiltered")
+    #mards.append(mard)
+    #corrs.append(corr)
 
 
     ct_df, corr = get_correlation([truth, puff],
@@ -422,24 +420,33 @@ def print_correlation(tax_count, tax_count_unq, taxa, dataset, report_kraken):
     corrs.append(corr)
 
 
-    ct_df, corr = get_correlation([truth, puff_unq],
-                                  ["truth", "Puff_Unq"])
-    mard = get_ards(ct_df, "Unique")
-    mards.append(mard)
-    corrs.append(corr)
+    #ct_df, corr = get_correlation([truth, puff_unq],
+    #                              ["truth", "Puff_Unq"])
+    #mard = get_ards(ct_df, "Unique")
+    #mards.append(mard)
+    #corrs.append(corr)
 
     return mards, corrs
 
-def make_boxplot(mards, corrs, level):
-    smzip = [[s,m] for sp,ma in zip(corrs, mards) for s,m in zip(sp, ma)]
+def make_boxplot(box_dict):
+    levels = box_dict.keys()
+    ct_df = pd.DataFrame()
+    for lvl in levels:
+        corrs = box_dict[lvl][1]
+        mards = box_dict[lvl][0]
+        smzip = [s for sp,ma in zip(corrs, mards) for s,m in zip(sp, ma)]
 
-    df = pd.DataFrame(smzip, columns=["Spearman", "mards"])
-    df['method'] = pd.Series(["Kraken", "kraken-unfilter", "Puff_MM", "Puff_Unique"]*10)
-    dd=pd.melt(df, id_vars=['method'], value_vars=["Spearman", "mards"], var_name='metric')
-    sns.boxplot(x='method', y='value', data=dd, hue='metric')
+        df = pd.DataFrame(smzip, columns=[lvl])
+        #df['method'] = pd.Series(["Kraken", "kraken-unfilter", "Puff_MM", "Puff_Unique"]*10)
+        df['method'] = pd.Series(["Kraken", "Puff_MM"]*10)
+        ct_df = pd.concat([ct_df, df], axis=0)
+
+    print(ct_df)
+    dd=pd.melt(ct_df, id_vars=['method'], value_vars=[lvl], var_name="level")
+    print(dd)
+    sns.boxplot(x='level', y='value', data=dd, hue='method')
     plt.show()
-    plt.title(level)
-    plt.savefig(level+".pdf")
+    plt.savefig("Spearman.pdf")
     plt.clf()
 
 @click.command()
@@ -458,7 +465,7 @@ def run(level, report, ds, plot, base, rpt_krk, score_ratio, print_score):
         dir = base
 
     if ds == None:
-        datasets = ["HC1", "HC2", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8"]
+        datasets = ["LC1", "LC2"]
     else:
         datasets = [ds]
 
@@ -468,6 +475,7 @@ def run(level, report, ds, plot, base, rpt_krk, score_ratio, print_score):
         levels = [level]
 
 
+    box_dict = {}
     for level in levels:
         # read in taxonomy information from the nodes.dmp file
         taxa = read_taxa(level)
@@ -484,10 +492,10 @@ def run(level, report, ds, plot, base, rpt_krk, score_ratio, print_score):
             tax_count = perform_counting(dir+ds+".dmp", ref2tax,
                                          taxa, score_ratio,
                                          print_score)
-            tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax,
-                                             taxa, score_ratio,
-                                             print_score)
-
+            #tax_count_unq = perform_counting(dir+ds+"_unq.dmp", ref2tax,
+            #                                 taxa, score_ratio,
+            #                                 print_score)
+            tax_count_unq = []
             if report:
                 # write the counted taxa
                 write_taxa_count(tax_count, tax_count_unq, taxa, ds)
@@ -499,10 +507,9 @@ def run(level, report, ds, plot, base, rpt_krk, score_ratio, print_score):
             corrs.append(corr)
 
         if plot:
-            make_boxplot(mards, corrs, level)
-        else:
-            print (mards)
-            print (corrs)
+            box_dict[level] = (mards, corrs)
 
+    if plot:
+        make_boxplot(box_dict)
 if __name__=="__main__":
     run()
