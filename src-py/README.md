@@ -1,8 +1,8 @@
 # format for the sam like input for krakmap
 
 <read_id> <# of algns>  
-<ref_id1> <#of intvs> <start1> <end1> <start2> <end2>  
-<ref_id2> <#of intvs> <start1> <end1> <start2> <end2>  
+<ref_id1> <#of intvs> \<start1\> \<end1\> \<start2\> \<end2\>  
+<ref_id2> <#of intvs> \<start1\> \<end1\> \<start2\> \<end2\>  
 
 # example
 read1 3  
